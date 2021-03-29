@@ -26,6 +26,11 @@ Execute os comandos no docker
     docker-compose run --rm artisan smartnx:sync
     docker-compose run --rm artisan schedule:run
 
+Acesso com usuário
+---------
+<b>CPF:</b> 222.222.222-22<br>
+<b>SENHA:</b> 123mudar
+
 Autor
 ---------
 Bruno Araújo brunoluan@gmail.com

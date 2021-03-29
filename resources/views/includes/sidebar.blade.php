@@ -5,7 +5,12 @@
 	<div data-scrollbar="true" data-height="100%">
 		<ul class="nav">
 			<li class="nav-header">MENU</li>
-			{{MenuItem::render()}}
+				{{MenuItem::render()}}
+				<li class="has-sub">
+					<a href="/logout" title="Sair">
+						<i class="fa fa-sign-out-alt"></i> Logout
+					</a>
+				</li>
 			<li><a href="javascript:;" class="sidebar-minify-btn" data-click="sidebar-minify"><i class="fa fa-angle-double-left"></i></a></li>
 		</ul>
 	</div>

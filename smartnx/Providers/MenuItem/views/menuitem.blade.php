@@ -33,8 +33,3 @@
         @endif
     </li>
 @endforeach
-<li class="has-sub">
-    <a href="/logout" title="Sair">
-        <i class="fa fa-sign-out-alt"></i> Logout
-    </a>
-</li>
