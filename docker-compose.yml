@@ -1,0 +1,124 @@
+version: '3'
+services:
+  app:
+    build:
+      context: ./docker_config_files/php
+      dockerfile: Dockerfile
+    image: laravel/app
+    container_name: smartnx_app
+    tty: true
+    environment:
+      SERVICE_NAME: app
+      SERVICE_TAGS: dev
+    working_dir: /var/www
+    volumes:
+      - ./:/var/www:delegated
+      - ./docker_config_files/php/local.ini:/usr/local/etc/php/conf.d/local.ini:delegated
+      - ~/.composer/docker-cache/:/root/.composer:cached
+    networks:
+      - app-network
+
+  webserver:
+    image: nginx:alpine
+    container_name: smartnx_webserver
+    tty: true
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./:/var/www:delegated
+      - ./docker_config_files/nginx/conf.d/:/etc/nginx/conf.d/:delegated
+    networks:
+      - app-network
+    depends_on:
+      - postgres
+      - app
+      - tokudb
+      - redis
+  postgres:
+    image: postgres:13
+    container_name: smartnx_postgres
+    ports:
+      - '${FORWARD_DB_PORT:-5432}:5432'
+    environment:
+      PGPASSWORD: '${DB_PASSWORD}'
+      POSTGRES_DB: '${DB_DATABASE}'
+      POSTGRES_USER: '${DB_USERNAME}'
+      POSTGRES_PASSWORD: '${DB_PASSWORD}'
+    volumes:
+      - "./docker_config_files/postgres/import.sql:/docker-entrypoint-initdb.d/import.sql"
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD", "pg_isready", "-q", "-d", "${DB_DATABASE}", "-U", "${DB_USERNAME}"]
+  tokudb:
+    image: percona/percona-server
+    container_name: smartnx_tokudb
+    ports:
+      - "3306:3306"
+    volumes:
+      - "./docker_config_files/percona/enabled:/sys/kernel/mm/transparent_hugepage/enabled"
+      - "./docker_config_files/percona/tokudb.sql:/docker-entrypoint-initdb.d/tokudb.sql"
+    environment:
+      MYSQL_ROOT_PASSWORD: '${DB_TOKUDB_ROOT_PASSWORD}'
+      MYSQL_DATABASE: '${DB_TOKUDB_DATABASE}'
+      MYSQL_USER: '${DB_TOKUDB_USER}'
+      MYSQL_PASSWORD: '${DB_TOKUDB_PASSWORD}'
+      MYSQL_ALLOW_EMPTY_PASSWORD: 'yes'
+    networks:
+      - app-network
+  redis:
+    image: 'redis:alpine'
+    container_name: smartnx_redis
+    ports:
+      - '${FORWARD_REDIS_PORT:-6379}:6379'
+    volumes:
+      - './docker_config_files/redis:/data'
+    networks:
+      - app-network
+    healthcheck:
+      test: [ "CMD", "redis-cli", "ping" ]
+
+  composer:
+    image: composer:latest
+    container_name: smartnx_composer
+    volumes:
+      - ./:/var/www/
+    working_dir: /var/www/
+    depends_on:
+      - app
+    networks:
+      - app-network
+
+  npm:
+    image: node:13.7
+    container_name: smartnx_npm
+    volumes:
+      - ./:/var/www/
+    working_dir: /var/www/
+    entrypoint: ['npm']
+
+  artisan:
+    build:
+      context: ./docker_config_files/php
+      dockerfile: Dockerfile
+    container_name: smartnx_artisan
+    volumes:
+      - ./:/var/www
+    depends_on:
+      - postgres
+      - tokudb
+    working_dir: /var/www/
+    entrypoint: ['php', '/var/www/artisan']
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
+
+#Volumes
+volumes:
+  dbdata:
+    driver: local
+  postgres:
